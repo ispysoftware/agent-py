@@ -1,2 +1,1 @@
-# agent-py
-A python wrapper around the Agent REST API.
+A python wrapper around the [Agent](https://www.ispyconnect.com/download.aspx) API. 
