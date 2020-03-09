@@ -38,10 +38,10 @@ class Agent:
 			except ValueError:
 				_LOGGER.exception('JSON decode exception caught while'
 								  'attempting to decode "%s"', req.text)
-				return {}
+				return None
 		except requests.exceptions.ConnectionError:
 			_LOGGER.exception('Unable to connect to Agent')
-			return {}
+			return None
 
 	def get_devices(self) -> List[Device]:
 		"""Get a list of devices from the Agent API."""
@@ -66,7 +66,6 @@ class Agent:
 
 		profiles = []
 		for raw_profile in raw_profiles['profiles']:
-			_LOGGER.info("Initializing profile %s", raw_profile['id'])
 			profiles.append(Profile(self, raw_profile))
 
 		return profiles
@@ -78,10 +77,10 @@ class Agent:
 				return profile.name
 		return None
 
-	def set_active_profile(self, profile_id):
+	def set_active_profile(self, profile_name):
 		"""Set the Agent profile to the given id."""
-		_LOGGER.info('Setting Agent alert profile to %s', profile_id)
-		return self.get_state('command.cgi?cmd=setProfile&ind={0}'.format(id))
+		_LOGGER.debug('Setting Agent alert profile to %s', profile_name)
+		return self.get_state('command.cgi?cmd=setProfileByName&name={0}'.format(profile_name))
 
 	def arm(self):
 		"""Arm Agent."""
@@ -91,16 +90,14 @@ class Agent:
 		"""Disarm Agent."""
 		self.get_state('command.cgi?cmd=disarm')
 
+	def update(self):
+		self._raw_result = self.get_state('command.cgi?cmd=getStatus')
+
 	@property
 	def is_available(self) -> bool:
 		"""Indicate if this Agent service is currently available."""
-		status_response = self.get_state(
-			'command.cgi?cmd=getStatus'
-		)
-
-		if not status_response:
+		if not self.raw_result:
 			return False
-		self._raw_result = status_response
 		return True
 
 	@property
@@ -125,12 +122,7 @@ class Agent:
 	@property
 	def is_armed(self) -> bool:
 		"""Indicate if Agent is armed."""
-		status_response = self.get_state('command.cgi?cmd=getStatus')
-
-		if not status_response:
-			return False
-		self._raw_result = status_response
-		return status_response['armed']
+		return self._raw_result['armed']
 
 	@staticmethod
 	def _build_server_url(server_host) -> str:

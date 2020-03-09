@@ -64,6 +64,12 @@ class Device:
 		return self._ot
 
 	@property
+	def client(self) -> int:
+		"""Get the Agent server client of this device."""
+		# pylint: disable=invalid-name
+		return self._client
+
+	@property
 	def name(self) -> str:
 		"""Get the name of this device."""
 		return self._raw_result['name']
