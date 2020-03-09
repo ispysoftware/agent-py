@@ -3,6 +3,7 @@
 import logging
 from enum import Enum
 from typing import Optional
+import asyncio
 from urllib.parse import urlencode
 
 _LOGGER = logging.getLogger(__name__)
@@ -75,9 +76,9 @@ class Device:
 		return self._raw_result['name']
 
 
-	def update(self):
+	async def update(self):
 		"""Update the device from the Agent server."""
-		self._raw_result = self._client.get_state('command.cgi?cmd=getObject&oid={0}&ot={1}'.format(self._oid,self._ot))
+		self._raw_result = await self._client.get_state('command.cgi?cmd=getObject&oid={0}&ot={1}'.format(self._oid,self._ot))
 
 	@property
 	def mjpeg_image_url(self) -> str:
@@ -134,37 +135,37 @@ class Device:
 		return self._raw_result
 
 
-	def enable(self):
-		self._client.get_state('command.cgi?cmd=switchOn&oid={0}&ot={1}'.format(self._oid, self._ot))
+	async def enable(self):
+		await self._client.get_state('command.cgi?cmd=switchOn&oid={0}&ot={1}'.format(self._oid, self._ot))
 		self._raw_result['data']['online'] = True
 
 
-	def disable(self):
-		self._client.get_state('command.cgi?cmd=switchOff&oid={0}&ot={1}'.format(self._oid, self._ot))
+	async def disable(self):
+		await self._client.get_state('command.cgi?cmd=switchOff&oid={0}&ot={1}'.format(self._oid, self._ot))
 		self._raw_result['data']['online'] = False
 
 
-	def record(self):
-		self._client.get_state('command.cgi?cmd=record&oid={0}&ot={1}'.format(self._oid, self._ot))
+	async def record(self):
+		await self._client.get_state('command.cgi?cmd=record&oid={0}&ot={1}'.format(self._oid, self._ot))
 		self._raw_result['data']['recording'] = True
 
 
-	def record_stop(self):
-		self._client.get_state('command.cgi?cmd=recordStop&oid={0}&ot={1}'.format(self._oid, self._ot))
+	async def record_stop(self):
+		await self._client.get_state('command.cgi?cmd=recordStop&oid={0}&ot={1}'.format(self._oid, self._ot))
 		self._raw_result['data']['recording'] = False
 
 
-	def alerts_on(self):
-		self._client.get_state('command.cgi?cmd=alertsOn&oid={0}&ot={1}'.format(self._oid, self._ot))
+	async def alerts_on(self):
+		await self._client.get_state('command.cgi?cmd=alertsOn&oid={0}&ot={1}'.format(self._oid, self._ot))
 		self._raw_result['data']['alertsActive'] = True
 
 
-	def alerts_off(self):
-		self._client.get_state('command.cgi?cmd=alertsOff&oid={0}&ot={1}'.format(self._oid, self._ot))
+	async def alerts_off(self):
+		await self._client.get_state('command.cgi?cmd=alertsOff&oid={0}&ot={1}'.format(self._oid, self._ot))
 		self._raw_result['data']['alertsActive'] = False
 
 
-	def get_events(self, time_period) -> Optional[int]:
+	async def get_events(self, time_period) -> Optional[int]:
 		"""Get the number of events that have occurred on this device.
 
 		Specifically only gets events that have occurred within the TimePeriod
@@ -183,7 +184,7 @@ class Device:
 		if time_period == TimePeriod.MONTH:
 			date_filter = 3600*24*30
 		
-		count_response = self._client.get_state(
+		count_response = await self._client.get_state(
 			'eventcounts.json?oid={0}&ot={1}&secs={2}'.format(self._oid, self._ot, date_filter)
 		)
 		return count_response['count']

@@ -1,6 +1,6 @@
 """Classes that allow interacting with Agent Profiles."""
 
-
+import asyncio
 class Profile:
 	"""Represents a Profile from Agent."""
 
@@ -23,14 +23,14 @@ class Profile:
 		return self._name
 
 	@property
-	def active(self) -> bool:
+	async def active(self) -> bool:
 		"""Indicate if this Profile is currently active."""
-		profiles = self._client.get_state(self._profile_url)['profiles']
+		profiles = await self._client.get_state(self._profile_url)['profiles']
 		for profile in profiles:
 			if int(profile['id']) == self._profile_id:
 				return profile['active']
 		return False
 
-	def activate(self):
+	async def activate(self):
 		"""Activate this Profile."""
-		self._client.set_active_profile(self._profile_id)
+		await self._client.set_active_profile(self._profile_id)

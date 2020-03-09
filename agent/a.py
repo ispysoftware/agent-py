@@ -4,6 +4,8 @@ from typing import List, Optional
 from urllib.parse import urljoin
 
 import requests
+import aiohttp
+import asyncio
 
 from agent.device import Device
 from agent.profile import Profile
@@ -21,47 +23,50 @@ class Agent:
 	def __init__(self, server_host) -> None:
 		"""Create an Agent API Client."""
 		self._server_url = Agent._build_server_url(server_host)
-		self._raw_result = self.get_state('command.cgi?cmd=getStatus')
+		
+		self._session = aiohttp.ClientSession()
+		self._conFailed = False
+		return None
 
-	def get_state(self, api_url)  -> dict:
+	async def close(self) -> None:
+		await self._session.close()
+
+	async def get_state(self, api_url)  -> dict:
 		"""Perform a GET request on the specified Agent API URL."""
-		return self._agent_request('get', api_url)
+		return await self._agent_request('get', api_url)
 
-	def _agent_request(self, method, api_url,timeout=DEFAULT_TIMEOUT) -> dict:
+	async def _agent_request(self, method, api_url,timeout=DEFAULT_TIMEOUT) -> dict:
 		try:
-			req = requests.request(method,urljoin(self._server_url, api_url),timeout=timeout,verify=False)
-			if not req.ok:
-				_LOGGER.error('Unable to get API response from Agent')			   
-
-			try:
-				return req.json()
-			except ValueError:
-				_LOGGER.exception('JSON decode exception caught while'
-								  'attempting to decode "%s"', req.text)
-				return None
+			
+			async with self._session.get(urljoin(self._server_url, api_url)) as resp:
+				js = await resp.json()
+				self._conFailed = False
+				return js
+#			req = requests.request(method,urljoin(self._server_url, api_url),timeout=timeout,verify=False)
+#			if not req.ok:
+#				_LOGGER.error('Unable to get API response from Agent')			   
 		except requests.exceptions.ConnectionError:
-			_LOGGER.exception('Unable to connect to Agent')
+			if not self._conFailed:
+				self._conFailed = True
+				_LOGGER.exception('Unable to connect to Agent')
 			return None
 
-	def get_devices(self) -> List[Device]:
+	async def get_devices(self) -> List[Device]:
 		"""Get a list of devices from the Agent API."""
-		raw_objects = self._agent_request('get', Agent.OBJECTS_URL)
+		raw_objects = await self._agent_request('get', Agent.OBJECTS_URL)
 		if not raw_objects:
-			_LOGGER.warning("Could not fetch devices from Agent")
 			return []
 
 		devices = []
 		for raw_result in raw_objects['objectList']:
-			_LOGGER.debug("Initializing device %s", raw_result['id'], raw_result['typeID'])
 			devices.append(Device(self, raw_result))
 
 		return devices
 	
-	def get_profiles(self) -> List[Profile]:
+	async def get_profiles(self) -> List[Profile]:
 		"""Get a list of Profiles from the Agent API."""
-		raw_profiles = self.get_state('command.cgi?cmd=getProfiles')
+		raw_profiles = await self.get_state('command.cgi?cmd=getProfiles')
 		if not raw_profiles:
-			_LOGGER.warning("Could not fetch profiles from Agent")
 			return []
 
 		profiles = []
@@ -70,35 +75,33 @@ class Agent:
 
 		return profiles
 
-	def get_active_profile(self) -> Optional[str]:
+	async def get_active_profile(self) -> Optional[str]:
 		"""Get the name of the active profile from the Agent API."""
-		for profile in self.get_profiles():
+		for profile in await self.get_profiles():
 			if profile.active:
 				return profile.name
 		return None
 
-	def set_active_profile(self, profile_name):
+	async def set_active_profile(self, profile_name):
 		"""Set the Agent profile to the given id."""
 		_LOGGER.debug('Setting Agent alert profile to %s', profile_name)
-		return self.get_state('command.cgi?cmd=setProfileByName&name={0}'.format(profile_name))
+		return await self.get_state('command.cgi?cmd=setProfileByName&name={0}'.format(profile_name))
 
-	def arm(self):
+	async def arm(self):
 		"""Arm Agent."""
-		self.get_state('command.cgi?cmd=arm')
+		return await self.get_state('command.cgi?cmd=arm')
 
-	def disarm(self):
+	async def disarm(self):
 		"""Disarm Agent."""
-		self.get_state('command.cgi?cmd=disarm')
+		return await self.get_state('command.cgi?cmd=disarm')
 
-	def update(self):
-		self._raw_result = self.get_state('command.cgi?cmd=getStatus')
+	async def update(self):
+		self._raw_result = await self.get_state('command.cgi?cmd=getStatus')
 
 	@property
 	def is_available(self) -> bool:
 		"""Indicate if this Agent service is currently available."""
-		if not self.raw_result:
-			return False
-		return True
+		return not self._conFailed
 
 	@property
 	def name(self) -> str:
