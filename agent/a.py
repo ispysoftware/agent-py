@@ -8,7 +8,7 @@ import aiohttp
 import asyncio
 
 from agent.device import Device
-from agent.profile import Profile
+from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,17 +25,25 @@ class Agent:
 		self._server_url = Agent._build_server_url(server_host)
 		
 		self._session = aiohttp.ClientSession()
-		self._conFailed = False
+		self._conFailed = False 
+		self.disconnected = datetime.now()
+		self.reconnect_interval = 10
+		self.profiles = []
+		self.devices = []
+		self._raw_result = {}
 		return None
 
 	async def close(self) -> None:
 		await self._session.close()
 
-	async def get_state(self, api_url)  -> dict:
+	async def get_state(self, api_url)  -> Optional[dict]:
 		"""Perform a GET request on the specified Agent API URL."""
 		return await self._agent_request('get', api_url)
 
 	async def _agent_request(self, method, api_url,timeout=DEFAULT_TIMEOUT) -> dict:
+		if self._conFailed:
+			if (datetime.now()-self.disconnected).total_seconds() < self.reconnect_interval:
+				return None
 		try:
 			
 			async with self._session.get(urljoin(self._server_url, api_url)) as resp:
@@ -45,7 +53,8 @@ class Agent:
 #			req = requests.request(method,urljoin(self._server_url, api_url),timeout=timeout,verify=False)
 #			if not req.ok:
 #				_LOGGER.error('Unable to get API response from Agent')			   
-		except requests.exceptions.ConnectionError:
+		except:
+			self.disconnected = datetime.now()
 			if not self._conFailed:
 				self._conFailed = True
 				_LOGGER.exception('Unable to connect to Agent')
@@ -54,49 +63,47 @@ class Agent:
 	async def get_devices(self) -> List[Device]:
 		"""Get a list of devices from the Agent API."""
 		raw_objects = await self._agent_request('get', Agent.OBJECTS_URL)
-		if not raw_objects:
-			return []
-
-		devices = []
-		for raw_result in raw_objects['objectList']:
-			devices.append(Device(self, raw_result))
-
-		return devices
+		if raw_objects is not None:
+			self.devices = []
+			for raw_result in raw_objects['objectList']:
+				self.devices.append(Device(self, raw_result))
+		return self.devices
 	
-	async def get_profiles(self) -> List[Profile]:
+	async def get_profiles(self) -> Optional[dict]:
 		"""Get a list of Profiles from the Agent API."""
 		raw_profiles = await self.get_state('command.cgi?cmd=getProfiles')
-		if not raw_profiles:
-			return []
+		if raw_profiles is not None:
+			self.profiles = raw_profiles['profiles']
 
-		profiles = []
-		for raw_profile in raw_profiles['profiles']:
-			profiles.append(Profile(self, raw_profile))
-
-		return profiles
+		return self.profiles
 
 	async def get_active_profile(self) -> Optional[str]:
 		"""Get the name of the active profile from the Agent API."""
-		for profile in await self.get_profiles():
-			if profile.active:
-				return profile.name
+		profiles = await self.get_profiles()
+		if profiles is None:
+			return None
+
+		for profile in profiles:
+			if profile['active']:
+				return profile['name']
 		return None
 
 	async def set_active_profile(self, profile_name):
 		"""Set the Agent profile to the given id."""
-		_LOGGER.debug('Setting Agent alert profile to %s', profile_name)
-		return await self.get_state('command.cgi?cmd=setProfileByName&name={0}'.format(profile_name))
+		await self.get_state('command.cgi?cmd=setProfileByName&name={0}'.format(profile_name))
 
 	async def arm(self):
 		"""Arm Agent."""
-		return await self.get_state('command.cgi?cmd=arm')
+		await self.get_state('command.cgi?cmd=arm')
 
 	async def disarm(self):
 		"""Disarm Agent."""
-		return await self.get_state('command.cgi?cmd=disarm')
+		await self.get_state('command.cgi?cmd=disarm')
 
 	async def update(self):
-		self._raw_result = await self.get_state('command.cgi?cmd=getStatus')
+		state = await self.get_state('command.cgi?cmd=getStatus')
+		if state is not None:
+			self._raw_result = state
 
 	@property
 	def is_available(self) -> bool:

@@ -8,7 +8,6 @@ from urllib.parse import urlencode
 
 _LOGGER = logging.getLogger(__name__)
 
-
 class TimePeriod(Enum):
 	"""Represents a period of time to check for events."""
 
@@ -40,7 +39,6 @@ class TimePeriod(Enum):
 	DAY = ('day', 'Events Last Day')
 	WEEK = ('week', 'Events Last Week')
 	MONTH = ('month', 'Events Last Month')
-
 
 class Device:
 	"""Represents a device from Agent."""
@@ -78,7 +76,9 @@ class Device:
 
 	async def update(self):
 		"""Update the device from the Agent server."""
-		self._raw_result = await self._client.get_state('command.cgi?cmd=getObject&oid={0}&ot={1}'.format(self._oid,self._ot))
+		state = await self._client.get_state('command.cgi?cmd=getObject&oid={0}&ot={1}'.format(self._oid,self._ot))
+		if state is not None:
+			self._raw_result = state
 
 	@property
 	def mjpeg_image_url(self) -> str:
@@ -101,22 +101,22 @@ class Device:
 		return 'grab.jpg?oid={0}'.format(self._oid)
 
 	@property
-	def recording(self) -> Optional[bool]:
+	def recording(self) -> bool:
 		"""Indicate if this device is currently recording."""
 		return self._raw_result['data']['recording']
 	
 	@property
-	def alerted(self) -> Optional[bool]:
+	def alerted(self) -> bool:
 		"""Indicate if this device has alerted."""
 		return self._raw_result['data']['alerted']
 
 	@property
-	def online(self) -> Optional[bool]:
+	def online(self) -> bool:
 		"""Indicate if this device is currently online."""
 		return self._raw_result['data']['online']
 
 	@property
-	def alerts_active(self) -> Optional[bool]:
+	def alerts_active(self) -> bool:
 		"""Indicate if this device has alerts enabled."""
 		return self._raw_result['data']['alertsActive']
 
@@ -136,33 +136,39 @@ class Device:
 
 
 	async def enable(self):
-		await self._client.get_state('command.cgi?cmd=switchOn&oid={0}&ot={1}'.format(self._oid, self._ot))
-		self._raw_result['data']['online'] = True
+		state = await self._client.get_state('command.cgi?cmd=switchOn&oid={0}&ot={1}'.format(self._oid, self._ot))
+		if state is not None:
+			self._raw_result['data']['online'] = True
 
 
 	async def disable(self):
-		await self._client.get_state('command.cgi?cmd=switchOff&oid={0}&ot={1}'.format(self._oid, self._ot))
-		self._raw_result['data']['online'] = False
+		state = await self._client.get_state('command.cgi?cmd=switchOff&oid={0}&ot={1}'.format(self._oid, self._ot))
+		if state is not None:
+			self._raw_result['data']['online'] = False
 
 
 	async def record(self):
-		await self._client.get_state('command.cgi?cmd=record&oid={0}&ot={1}'.format(self._oid, self._ot))
-		self._raw_result['data']['recording'] = True
+		state = await self._client.get_state('command.cgi?cmd=record&oid={0}&ot={1}'.format(self._oid, self._ot))
+		if state is not None:
+			self._raw_result['data']['recording'] = True
 
 
 	async def record_stop(self):
-		await self._client.get_state('command.cgi?cmd=recordStop&oid={0}&ot={1}'.format(self._oid, self._ot))
-		self._raw_result['data']['recording'] = False
+		state = await self._client.get_state('command.cgi?cmd=recordStop&oid={0}&ot={1}'.format(self._oid, self._ot))
+		if state is not None:
+			self._raw_result['data']['recording'] = False
 
 
 	async def alerts_on(self):
-		await self._client.get_state('command.cgi?cmd=alertsOn&oid={0}&ot={1}'.format(self._oid, self._ot))
-		self._raw_result['data']['alertsActive'] = True
+		state = await self._client.get_state('command.cgi?cmd=alertsOn&oid={0}&ot={1}'.format(self._oid, self._ot))
+		if state is not None:
+			self._raw_result['data']['alertsActive'] = True
 
 
 	async def alerts_off(self):
-		await self._client.get_state('command.cgi?cmd=alertsOff&oid={0}&ot={1}'.format(self._oid, self._ot))
-		self._raw_result['data']['alertsActive'] = False
+		state = await self._client.get_state('command.cgi?cmd=alertsOff&oid={0}&ot={1}'.format(self._oid, self._ot))
+		if state is not None:
+			self._raw_result['data']['alertsActive'] = False
 
 
 	async def get_events(self, time_period) -> Optional[int]:
@@ -187,4 +193,7 @@ class Device:
 		count_response = await self._client.get_state(
 			'eventcounts.json?oid={0}&ot={1}&secs={2}'.format(self._oid, self._ot, date_filter)
 		)
+		if count_response is None:
+			return 0
+
 		return count_response['count']
