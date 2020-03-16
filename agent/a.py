@@ -2,10 +2,13 @@
 import logging
 from typing import List, Optional
 from urllib.parse import urljoin
+from .exceptions import AgentConnectionError, AgentError
 
 import requests
 import aiohttp
+import socket
 import asyncio
+import async_timeout
 
 from agent.device import Device
 from datetime import datetime
@@ -14,17 +17,19 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class Agent:
-	"""The Agent API client itself. Create one of these to begin."""
+	"""The Agent DVR API client. Create one of these to begin."""
 
 	DEFAULT_SERVER_PATH = '/'
 	DEFAULT_TIMEOUT = 10
 	OBJECTS_URL = 'command.cgi?cmd=getObjects'
 
-	def __init__(self, server_host) -> None:
+	def __init__(self, server_host, session: aiohttp.client.ClientSession = None) -> None:
 		"""Create an Agent API Client."""
 		self._server_url = Agent._build_server_url(server_host)
-		
-		self._session = aiohttp.ClientSession()
+		self._session = session or aiohttp.ClientSession()
+		self._close_session = False
+		if session is None:
+			self._close_session = True
 		self._conFailed = False 
 		self.disconnected = datetime.now()
 		self.reconnect_interval = 10
@@ -34,7 +39,8 @@ class Agent:
 		return None
 
 	async def close(self) -> None:
-		await self._session.close()
+		if self._session and self._close_session:
+			await self._session.close()
 
 	async def get_state(self, api_url)  -> Optional[dict]:
 		"""Perform a GET request on the specified Agent API URL."""
@@ -44,21 +50,56 @@ class Agent:
 		if self._conFailed:
 			if (datetime.now()-self.disconnected).total_seconds() < self.reconnect_interval:
 				return None
+		headers = {
+			"User-Agent": f"PythonAgentDVR/",
+			"Accept": "application/json, text/plain, */*",
+		}
+
 		try:
-			
-			async with self._session.get(urljoin(self._server_url, api_url)) as resp:
-				js = await resp.json()
-				self._conFailed = False
-				return js
-#			req = requests.request(method,urljoin(self._server_url, api_url),timeout=timeout,verify=False)
-#			if not req.ok:
-#				_LOGGER.error('Unable to get API response from Agent')			   
-		except:
+			with async_timeout.timeout(timeout):
+				response = await self._session.request(
+					"GET", urljoin(self._server_url, api_url), json=None, headers=headers,
+				)
+				response.raise_for_status()
+		except asyncio.TimeoutError as exception:
 			self.disconnected = datetime.now()
-			if not self._conFailed:
-				self._conFailed = True
-				_LOGGER.exception('Unable to connect to Agent')
-			return None
+			self._conFailed = True
+			
+			raise AgentConnectionError(
+				"Timeout occurred while connecting to Agent DVR server"
+			) from exception
+		except (
+			aiohttp.ClientError,
+			aiohttp.ClientResponseError,
+			socket.gaierror,
+		) as exception:
+			self.disconnected = datetime.now()
+			self._conFailed = True
+			
+			raise AgentConnectionError(
+				"Error occurred while communicating with Agent DVR server"
+			) from exception
+
+		content_type = response.headers.get("Content-Type", "")
+		if "application/json" not in content_type:
+			self.disconnected = datetime.now()
+			self._conFailed = True
+
+			text = await response.text()
+			raise AgentError(
+				"Unexpected response from the Agent DVR server",
+				{"Content-Type": content_type, "response": text},
+			) from exception
+
+		json = await response.json()
+		if json.get('error') is not None:
+			#error from Agent - Server is still available
+			raise AgentError(
+				"Error from the Agent DVR server",
+				{"Content-Type": content_type, "response": json},
+			) from exception
+		self._conFailed = False
+		return json
 
 	async def get_devices(self) -> List[Device]:
 		"""Get a list of devices from the Agent API."""

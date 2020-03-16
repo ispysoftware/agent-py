@@ -109,6 +109,11 @@ class Device:
 	def alerted(self) -> bool:
 		"""Indicate if this device has alerted."""
 		return self._raw_result['data']['alerted']
+	
+	@property
+	def detected(self) -> bool:
+		"""Indicate if this device has detected."""
+		return self._raw_result['data']['detected']
 
 	@property
 	def online(self) -> bool:
@@ -119,6 +124,11 @@ class Device:
 	def alerts_active(self) -> bool:
 		"""Indicate if this device has alerts enabled."""
 		return self._raw_result['data']['alertsActive']
+	
+	@property
+	def detector_active(self) -> bool:
+		"""Indicate if this device has alerts enabled."""
+		return self._raw_result['data']['detectorActive']
 
 	@property
 	def connected(self) -> bool:
@@ -160,15 +170,29 @@ class Device:
 
 
 	async def alerts_on(self):
-		state = await self._client.get_state('command.cgi?cmd=alertsOn&oid={0}&ot={1}'.format(self._oid, self._ot))
+		state = await self._client.get_state('command.cgi?cmd=alertOn&oid={0}&ot={1}'.format(self._oid, self._ot))
 		if state is not None:
 			self._raw_result['data']['alertsActive'] = True
 
 
 	async def alerts_off(self):
-		state = await self._client.get_state('command.cgi?cmd=alertsOff&oid={0}&ot={1}'.format(self._oid, self._ot))
+		state = await self._client.get_state('command.cgi?cmd=alertOff&oid={0}&ot={1}'.format(self._oid, self._ot))
 		if state is not None:
 			self._raw_result['data']['alertsActive'] = False
+
+	async def detector_on(self):
+		state = await self._client.get_state('command.cgi?cmd=detectorOn&oid={0}&ot={1}'.format(self._oid, self._ot))
+		if state is not None:
+			self._raw_result['data']['detectorActive'] = True
+
+
+	async def detector_off(self):
+		state = await self._client.get_state('command.cgi?cmd=detectorOff&oid={0}&ot={1}'.format(self._oid, self._ot))
+		if state is not None:
+			self._raw_result['data']['detectorActive'] = False
+
+	async def snapshot(self):
+		await self._client.get_state('command.cgi?cmd=snapshot&oid={0}&ot={1}'.format(self._oid, self._ot))
 
 
 	async def get_events(self, time_period) -> Optional[int]:
