@@ -23,6 +23,9 @@ async def Test (url):
 	print(tc.name)
 	print(tc.version)
 	print(tc.raw_result)
+	print(tc.remote_access)
+	print(tc.device_count)
+
 	m= await tc.get_devices()
 	for o in m:
 		print(o.name)

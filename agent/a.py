@@ -89,7 +89,7 @@ class Agent:
 			raise AgentError(
 				"Unexpected response from the Agent DVR server",
 				{"Content-Type": content_type, "response": text},
-			) from exception
+			)
 
 		json = await response.json()
 		if json.get('error') is not None:
@@ -97,7 +97,7 @@ class Agent:
 			raise AgentError(
 				"Error from the Agent DVR server",
 				{"Content-Type": content_type, "response": json},
-			) from exception
+			)
 		self._conFailed = False
 		return json
 
@@ -162,6 +162,11 @@ class Agent:
 		return self._raw_result["unique"]
 
 	@property
+	def remote_access(self) -> bool:
+		"""Return unique identifier for the server."""
+		return self._raw_result["remoteAccess"]
+
+	@property
 	def version(self) -> str:
 		"""Return version of the server."""
 		return self._raw_result["version"]
@@ -170,10 +175,14 @@ class Agent:
 	def raw_result(self) -> dict:
 		return self._raw_result
 
+	@property 
+	def device_count(self) -> int:
+		return self._raw_result["devices"]
+
 	@property
 	def is_armed(self) -> bool:
 		"""Indicate if Agent is armed."""
-		return self._raw_result['armed']
+		return self._raw_result["armed"]
 
 	@staticmethod
 	def _build_server_url(server_host) -> str:
