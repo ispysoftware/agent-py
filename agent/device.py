@@ -141,13 +141,17 @@ class Device:
 		return self._ot == 2 and self._raw_result['data']['ptzid'] != -1
 
 	@property
-	def width(self) -> str:
+	def width(self) -> int:
 		"""Get the width of the device."""
+		if self._ot is not 2:
+			return -1
 		return self._raw_result['data']['width']
 
 	@property
-	def height(self) -> str:
+	def height(self) -> int:
 		"""Get the height of the device."""
+		if self._ot is not 2:
+			return -1
 		return self._raw_result['data']['height']
 
 	@property
