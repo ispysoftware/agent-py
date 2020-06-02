@@ -147,7 +147,7 @@ class Device:
 
 	@property
 	def height(self) -> str:
-		"""Get the width of the device."""
+		"""Get the height of the device."""
 		return self._raw_result['data']['height']
 
 	@property
