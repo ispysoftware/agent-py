@@ -63,7 +63,7 @@ class Device:
 		return self._ot
 
 	@property
-	def client(self) -> int:
+	def client(self) -> object:
 		"""Get the Agent server client of this device."""
 		# pylint: disable=invalid-name
 		return self._client
@@ -143,17 +143,21 @@ class Device:
 	@property
 	def width(self) -> int:
 		"""Get the width of the device."""
-		if self._ot is not 2:
-			return -1
 		return self._raw_result['data']['width']
 
 	@property
 	def height(self) -> int:
 		"""Get the height of the device."""
-		if self._ot is not 2:
-			return -1
 		return self._raw_result['data']['height']
-
+		
+	@property
+	def location(self) -> str:
+		"""Get the location of the device."""
+		ind = self._raw_result['locationIndex']
+		if ind > -1 and ind < len(self._client.locations):
+			return self._client.locations[ind]['name']
+		return ""
+	
 	@property
 	def raw_result(self) -> dict:
 		return self._raw_result

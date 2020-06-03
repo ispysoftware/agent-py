@@ -34,6 +34,7 @@ class Agent:
 		self.disconnected = datetime.now()
 		self.reconnect_interval = 10
 		self.profiles = []
+		self.locations = []
 		self.devices = []
 		self._raw_result = {}
 		return None
@@ -106,6 +107,7 @@ class Agent:
 		raw_objects = await self._agent_request('get', Agent.OBJECTS_URL)
 		if raw_objects is not None:
 			self.devices = []
+			self.locations = raw_objects['locations'];
 			for raw_result in raw_objects['objectList']:
 				self.devices.append(Device(self, raw_result))
 		return self.devices
