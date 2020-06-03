@@ -63,7 +63,7 @@ class Device:
 		return self._ot
 
 	@property
-	def client(self) -> object:
+	def client(self):
 		"""Get the Agent server client of this device."""
 		# pylint: disable=invalid-name
 		return self._client

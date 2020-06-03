@@ -5,7 +5,7 @@ long_description = open('README.md').read()
 
 setup(
     name='agent-py',
-    version='0.0.21',
+    version='0.0.22',
     license='Apache Software License',
     url='https://github.com/ispysoftware/agent-py',
     author='Sean Tearney',
