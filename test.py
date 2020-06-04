@@ -40,6 +40,8 @@ async def Test (url):
 		print(o.location)
 		print(o.width)
 		print(o.height)
+		print(o.mjpegStreamWidth)
+		print(o.mjpegStreamHeight)
 		print(o.alerted)
 		print(o.online)
 		print(o.detector_active)

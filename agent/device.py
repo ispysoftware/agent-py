@@ -151,6 +151,20 @@ class Device:
 		return self._raw_result['data']['height']
 		
 	@property
+	def mjpegStreamWidth(self) -> int:
+		"""Get the computed stream width of the device."""
+		if 'mjpegStreamWidth' in self._raw_result['data']:
+			return self._raw_result['data']['mjpegStreamWidth']
+		return 640
+
+	@property
+	def mjpegStreamHeight(self) -> int:
+		"""Get the computed stream height of the device."""
+		if 'mjpegStreamHeight' in self._raw_result['data']:
+			return self._raw_result['data']['mjpegStreamHeight']
+		return 480
+		
+	@property
 	def location(self) -> str:
 		"""Get the location of the device."""
 		ind = self._raw_result['locationIndex']
