@@ -4,7 +4,6 @@ from typing import List, Optional
 from urllib.parse import urljoin
 from .exceptions import AgentConnectionError, AgentError
 
-import requests
 import aiohttp
 import socket
 import asyncio
