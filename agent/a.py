@@ -56,7 +56,7 @@ class Agent:
 		}
 
 		try:
-			with async_timeout.timeout(timeout):
+			async with async_timeout.timeout(timeout):
 				response = await self._session.request(
 					"GET", urljoin(self._server_url, api_url), json=None, headers=headers,
 				)
