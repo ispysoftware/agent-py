@@ -2,7 +2,7 @@ A python wrapper around the [Agent](https://www.ispyconnect.com/download.aspx) A
 
 Create package:
 
-\agent-py>python setup.py sdist bdist_wheel
+\agent-py>python3 setup.py sdist bdist_wheel
 
 install locally:
 
