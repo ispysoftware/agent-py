@@ -7,7 +7,6 @@ from .exceptions import AgentConnectionError, AgentError
 import aiohttp
 import socket
 import asyncio
-import async_timeout
 
 from agent.device import Device
 from datetime import datetime
@@ -56,7 +55,7 @@ class Agent:
 		}
 
 		try:
-			async with async_timeout.timeout(timeout):
+			async with asyncio.timeout(timeout):
 				response = await self._session.request(
 					"GET", urljoin(self._server_url, api_url), json=None, headers=headers,
 				)
