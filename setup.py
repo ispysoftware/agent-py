@@ -18,6 +18,7 @@ setup(
     include_package_data=True,
     platforms='any',
     install_requires=list(val.strip() for val in open('requirements.txt')),
+    python_requires='>=3.11',
     classifiers=[
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
