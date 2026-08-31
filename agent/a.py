@@ -19,9 +19,9 @@ class Agent:
 
 	DEFAULT_SERVER_PATH = '/'
 	DEFAULT_TIMEOUT = 10
-	OBJECTS_URL = 'command.cgi?cmd=getObjects'
+	OBJECTS_URL = 'command/getObjects'
 
-	def __init__(self, server_host, session: aiohttp.client.ClientSession = None) -> None:
+	def __init__(self, server_host, session: Optional[aiohttp.client.ClientSession] = None) -> None:
 		"""Create an Agent API Client."""
 		self._server_url = Agent._build_server_url(server_host)
 		self._session = session or aiohttp.ClientSession()
@@ -31,7 +31,7 @@ class Agent:
 		self._conFailed = False 
 		self.disconnected = datetime.now()
 		self.reconnect_interval = 10
-		self.profiles = []
+		self.profiles = {}
 		self.locations = []
 		self.devices = []
 		self._raw_result = {}
@@ -45,7 +45,7 @@ class Agent:
 		"""Perform a GET request on the specified Agent API URL."""
 		return await self._agent_request('get', api_url)
 
-	async def _agent_request(self, method, api_url,timeout=DEFAULT_TIMEOUT) -> dict:
+	async def _agent_request(self, method, api_url,timeout=DEFAULT_TIMEOUT) -> dict|None:
 		if self._conFailed:
 			if (datetime.now()-self.disconnected).total_seconds() < self.reconnect_interval:
 				return None
